@@ -1,0 +1,61 @@
+name: forgejo
+# see https://documentation.ubuntu.com/rockcraft/en/stable/explanation/bases/
+# for more information about bases and using 'bare' bases for chiselled rocks
+base: ubuntu@24.04
+#build-base: ubuntu@24.04
+version: 8.0.1
+summary: Forgejo is a self-hosted lightweight software forge.
+description: |
+    Take back control of your software development process,
+    self-host your projects and get everyone involved in delivering quality software on the same page.
+platforms: # the platforms this rock should be built on and run on
+    amd64:
+services:
+  forgejo:
+    override: replace
+    command: forgejo -c /etc/forgejo/app.ini
+    startup: enabled
+    user: git
+    environment:
+      FORGEJO_WORK_DIR: /var/lib/forgejo
+    on-failure: restart
+
+
+parts:
+    forgejo:
+        source: https://codeberg.org/Forgejo/forgejo
+        source-tag: v${CRAFT_PROJECT_VERSION}
+        source-type: git
+        plugin: dump
+        build-packages:
+          - make
+        build-snaps:
+          - go/1.23/stable
+          - node/22/stable
+        stage-packages:
+          - git
+          - git-lfs
+        override-build: |
+          # export TAGS="bindata timetzdata"
+          # craftctl default
+
+          LDFLAGS="" TAGS="bindata timetzdata" make build
+          # rename binary
+          #mv ${CRAFT_PART_INSTALL}/bin/gitea ${CRAFT_PART_INSTALL}/gitea
+          #rm ${CRAFT_PART_INSTALL}/bin/*
+          mkdir -p ${CRAFT_PART_INSTALL}/bin/
+          mv ${CRAFT_PART_BUILD}/gitea ${CRAFT_PART_INSTALL}/bin/forgejo
+          # remove rest of the binaries?
+          # add custom user as in docs
+          groupadd --root ${CRAFT_PART_INSTALL} git
+          useradd -d /var/lib/forgejo -s /bin/bash --root ${CRAFT_PART_INSTALL} -g git git
+          # repository dir
+          mkdir -p ${CRAFT_PART_INSTALL}/var/lib/forgejo
+          # chown git:git ${CRAFT_PART_INSTALL}/var/lib/forgejo
+          chown 1000:1000 ${CRAFT_PART_INSTALL}/var/lib/forgejo
+          chmod 750 ${CRAFT_PART_INSTALL}/var/lib/forgejo
+          # config dir
+          mkdir ${CRAFT_PART_INSTALL}/etc/forgejo
+          # chown root:git ${CRAFT_PART_INSTALL}/etc/forgejo
+          chown 0:1000 ${CRAFT_PART_INSTALL}/etc/forgejo
+          chmod 770 ${CRAFT_PART_INSTALL}/etc/forgejo
