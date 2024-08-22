@@ -35,6 +35,7 @@ parts:
         stage-packages:
           - git
           - git-lfs
+          - ca-certificates
         override-build: |
           # export TAGS="bindata timetzdata"
           # craftctl default
