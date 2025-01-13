@@ -1,9 +1,10 @@
 name: forgejo
 # see https://documentation.ubuntu.com/rockcraft/en/stable/explanation/bases/
 # for more information about bases and using 'bare' bases for chiselled rocks
-base: ubuntu@24.04
-#build-base: ubuntu@24.04
-version: 8.0.1
+base: bare
+build-base: ubuntu@24.04
+version: 9.0.3
+license:  GPL-3.0
 summary: Forgejo is a self-hosted lightweight software forge.
 description: |
     Take back control of your software development process,
@@ -26,7 +27,7 @@ parts:
         source: https://codeberg.org/Forgejo/forgejo
         source-tag: v${CRAFT_PROJECT_VERSION}
         source-type: git
-        plugin: dump
+        plugin: nil
         build-packages:
           - make
         build-snaps:
@@ -36,6 +37,9 @@ parts:
           - git
           - git-lfs
           - ca-certificates
+          - base-passwd
+          - libc6
+          - bash
         override-build: |
           # export TAGS="bindata timetzdata"
           # craftctl default
@@ -44,8 +48,8 @@ parts:
           # rename binary
           #mv ${CRAFT_PART_INSTALL}/bin/gitea ${CRAFT_PART_INSTALL}/gitea
           #rm ${CRAFT_PART_INSTALL}/bin/*
-          mkdir -p ${CRAFT_PART_INSTALL}/bin/
-          mv ${CRAFT_PART_BUILD}/gitea ${CRAFT_PART_INSTALL}/bin/forgejo
+          mkdir -p ${CRAFT_PART_INSTALL}/usr/bin/
+          mv ${CRAFT_PART_BUILD}/gitea ${CRAFT_PART_INSTALL}/usr/bin/forgejo
           # remove rest of the binaries?
           # add custom user as in docs
           groupadd --root ${CRAFT_PART_INSTALL} git
@@ -60,3 +64,11 @@ parts:
           # chown root:git ${CRAFT_PART_INSTALL}/etc/forgejo
           chown 0:1000 ${CRAFT_PART_INSTALL}/etc/forgejo
           chmod 770 ${CRAFT_PART_INSTALL}/etc/forgejo
+
+          # fake usrmerge
+          ln -s -r ${CRAFT_PART_INSTALL}/usr/lib ${CRAFT_PART_INSTALL}/lib
+          ln -s -r ${CRAFT_PART_INSTALL}/usr/lib64 ${CRAFT_PART_INSTALL}/lib64
+          ln -s -r ${CRAFT_PART_INSTALL}/usr/bin ${CRAFT_PART_INSTALL}/bin
+
+          # create tmpdir
+          install -d -m 0777 ${CRAFT_PART_INSTALL}/tmp
