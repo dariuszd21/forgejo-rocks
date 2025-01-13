@@ -23,7 +23,16 @@ services:
 
 
 parts:
+    forgejo-deps:
+        plugin: nil
+        source: .
+        stage-packages:
+          - git-lfs
+        stage:
+          - usr/bin/git-lfs
     forgejo:
+        after:
+          - forgejo-deps
         source: https://codeberg.org/Forgejo/forgejo
         source-tag: v${CRAFT_PROJECT_VERSION}
         source-type: git
@@ -34,17 +43,18 @@ parts:
           - go/1.23/stable
           - node/22/stable
         stage-packages:
-          - git
-          - git-lfs
-          - ca-certificates
-          - base-passwd
-          - libc6
-          - bash
+          - git_bins
+          - ca-certificates_data
+          - base-passwd_data
+          - libc6_libs
+          - bash_bins
         override-build: |
           # export TAGS="bindata timetzdata"
           # craftctl default
 
-          LDFLAGS="" TAGS="bindata timetzdata" make build
+          make frontend
+          go build contrib/environment-to-ini/environment-to-ini.go
+          LDFLAGS="-buildid=" TAGS="bindata timetzdata" make GOFLAGS="-trimpath" RELEASE_VERSION=$CRAFT_PROJECT_VERSION go-check generate-backend static-executable
           # rename binary
           #mv ${CRAFT_PART_INSTALL}/bin/gitea ${CRAFT_PART_INSTALL}/gitea
           #rm ${CRAFT_PART_INSTALL}/bin/*
