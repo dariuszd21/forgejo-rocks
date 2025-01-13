@@ -47,6 +47,8 @@ parts:
           - node/22/stable
         stage-packages:
           - git_bins
+          - git_daemon
+          - git_http-support
           - ca-certificates_data
           - base-passwd_data
           - libc6_libs
