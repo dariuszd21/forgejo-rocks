@@ -30,12 +30,25 @@ parts:
         source: .
         stage-packages:
           - git-lfs
+          - git
         stage:
           - usr/bin/git-lfs
+          - usr/share/git-core
+          - usr/bin/git-receive-pack
+          - usr/bin/git-upload-archive
+          - usr/bin/git-upload-pack
+
+    shell-session:
+      plugin: nil
+      stage-packages:
+        - bash_bins
+      override-build: |
+        ln -rs ${CRAFT_PART_INSTALL}/usr/bin/bash ${CRAFT_PART_INSTALL}/usr/bin/sh
 
     forgejo:
         after:
           - forgejo-deps
+          - shell-session
         source: https://codeberg.org/Forgejo/forgejo
         source-tag: v${CRAFT_PROJECT_VERSION}
         source-type: git
@@ -53,6 +66,10 @@ parts:
           - base-passwd_data
           - libc6_libs
           - bash_bins
+          # - coreutils_bins
+          # - perl_bins
+          # - openssh-client_bins
+          # - perl-base_bins
         override-build: |
           # build binary
           # see https://codeberg.org/Codeberg-Infrastructure/forgejo/src/branch/codeberg-9/Dockerfile
