@@ -66,7 +66,7 @@ parts:
           - base-passwd_data
           - libc6_libs
           - bash_bins
-          # - coreutils_bins
+          - coreutils_bins
           # - perl_bins
           # - openssh-client_bins
           # - perl-base_bins
