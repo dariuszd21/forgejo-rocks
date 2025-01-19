@@ -28,9 +28,10 @@ rockcraft pack
 
 ## Import image to podman
 ```shell
-podman load --input forgejo_8.0.1_amd64.rock
-podman tag localhost/8.0.1:latest localhost/forgejo:8.0.1
-podman image rm localhost/8.0.1:latest
+podman load --input forgejo_9.0.3_amd64.rock
+podman tag localhost/9.0.3:latest localhost/forgejo:9.0.3
+# remove incorrectly tagged image
+podman image rm localhost/9.0.3:latest
 ```
 
 ## Create peristent storage for the config and repositories
@@ -42,5 +43,5 @@ podman volume create forgejo-data
 
 ## Run image in the pod
 ```shell
-podman run --pod forgejo-dev --name forgejo -v forgejo-conf:/etc/forgejo -v forgejo-data:/var/lib/forgejo -ti localhost/forgejo:8.0.1
+podman run --pod forgejo-dev --name forgejo -v forgejo-conf:/etc/forgejo -v forgejo-data:/var/lib/forgejo -ti localhost/forgejo:9.0.3
 ```
