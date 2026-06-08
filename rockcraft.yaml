@@ -3,7 +3,7 @@ name: forgejo
 # for more information about bases and using 'bare' bases for chiselled rocks
 base: bare
 build-base: ubuntu@24.04
-version: 9.0.3
+version: 15.0.2
 # Should be GPL-3.0-or-later but it doesn't work
 license: GPL-3.0
 summary: Forgejo is a self-hosted lightweight software forge.
