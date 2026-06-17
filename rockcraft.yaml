@@ -1,15 +1,17 @@
 name: forgejo
 # see https://documentation.ubuntu.com/rockcraft/en/stable/explanation/bases/
 # for more information about bases and using 'bare' bases for chiselled rocks
-base: ubuntu@24.04
-#build-base: ubuntu@24.04
-version: 8.0.1
+base: bare
+build-base: ubuntu@24.04
+version: 15.0.2
+# Should be GPL-3.0-or-later but it doesn't work
+license: GPL-3.0
 summary: Forgejo is a self-hosted lightweight software forge.
 description: |
-    Take back control of your software development process,
-    self-host your projects and get everyone involved in delivering quality software on the same page.
+  Take back control of your software development process,
+  self-host your projects and get everyone involved in delivering quality software on the same page.
 platforms: # the platforms this rock should be built on and run on
-    amd64:
+  amd64:
 services:
   forgejo:
     override: replace
@@ -20,43 +22,83 @@ services:
       FORGEJO_WORK_DIR: /var/lib/forgejo
     on-failure: restart
 
-
 parts:
-    forgejo:
-        source: https://codeberg.org/Forgejo/forgejo
-        source-tag: v${CRAFT_PROJECT_VERSION}
-        source-type: git
-        plugin: dump
-        build-packages:
-          - make
-        build-snaps:
-          - go/1.23/stable
-          - node/22/stable
-        stage-packages:
-          - git
-          - git-lfs
-          - ca-certificates
-        override-build: |
-          # export TAGS="bindata timetzdata"
-          # craftctl default
+  # Separate part for non-chiselled package
+  forgejo-deps:
+    plugin: nil
+    source: .
+    stage-packages:
+      - git-lfs
+      - git
+    stage:
+      - usr/bin/git-lfs
+      - usr/share/git-core
+      - usr/bin/git-receive-pack
+      - usr/bin/git-upload-archive
+      - usr/bin/git-upload-pack
 
-          LDFLAGS="" TAGS="bindata timetzdata" make build
-          # rename binary
-          #mv ${CRAFT_PART_INSTALL}/bin/gitea ${CRAFT_PART_INSTALL}/gitea
-          #rm ${CRAFT_PART_INSTALL}/bin/*
-          mkdir -p ${CRAFT_PART_INSTALL}/bin/
-          mv ${CRAFT_PART_BUILD}/gitea ${CRAFT_PART_INSTALL}/bin/forgejo
-          # remove rest of the binaries?
-          # add custom user as in docs
-          groupadd --root ${CRAFT_PART_INSTALL} git
-          useradd -d /var/lib/forgejo -s /bin/bash --root ${CRAFT_PART_INSTALL} -g git git
-          # repository dir
-          mkdir -p ${CRAFT_PART_INSTALL}/var/lib/forgejo
-          # chown git:git ${CRAFT_PART_INSTALL}/var/lib/forgejo
-          chown 1000:1000 ${CRAFT_PART_INSTALL}/var/lib/forgejo
-          chmod 750 ${CRAFT_PART_INSTALL}/var/lib/forgejo
-          # config dir
-          mkdir ${CRAFT_PART_INSTALL}/etc/forgejo
-          # chown root:git ${CRAFT_PART_INSTALL}/etc/forgejo
-          chown 0:1000 ${CRAFT_PART_INSTALL}/etc/forgejo
-          chmod 770 ${CRAFT_PART_INSTALL}/etc/forgejo
+  shell-session:
+    plugin: nil
+    stage-packages:
+      - bash_bins
+    override-build: |
+      ln -rs ${CRAFT_PART_INSTALL}/usr/bin/bash ${CRAFT_PART_INSTALL}/usr/bin/sh
+
+  forgejo:
+    after:
+      - forgejo-deps
+      - shell-session
+    source: https://codeberg.org/Forgejo/forgejo
+    source-tag: v${CRAFT_PROJECT_VERSION}
+    source-type: git
+    plugin: nil
+    override-pull: |
+      echo "nothing"
+      craftctl default
+    build-packages:
+      - make
+    build-snaps:
+      - go/1.23/stable
+      - node/22/stable
+    stage-packages:
+      - git_bins
+      - git_daemon
+      - git_http-support
+      - ca-certificates_data
+      - base-passwd_data
+      - libc6_libs
+      - bash_bins
+      - coreutils_bins
+      # - perl_bins
+      # - openssh-client_bins
+      # - perl-base_bins
+    override-build: |
+      # build binary
+      # see https://codeberg.org/Codeberg-Infrastructure/forgejo/src/branch/codeberg-9/Dockerfile
+      make frontend
+      go build contrib/environment-to-ini/environment-to-ini.go
+      LDFLAGS="-buildid=" TAGS="bindata timetzdata" make GOFLAGS="-trimpath" RELEASE_VERSION=$CRAFT_PROJECT_VERSION go-check generate-backend static-executable
+
+      # rename binary
+      install -d ${CRAFT_PART_INSTALL}/usr/bin/
+      mv ${CRAFT_PART_BUILD}/gitea ${CRAFT_PART_INSTALL}/usr/bin/forgejo
+      # remove rest of the binaries?
+      # add custom user as in docs
+      groupadd --root ${CRAFT_PART_INSTALL} git
+      useradd -d /var/lib/forgejo -s /bin/bash --root ${CRAFT_PART_INSTALL} -u 1000 -g git git
+
+      # repository dir
+      # chown git:git ${CRAFT_PART_INSTALL}/var/lib/forgejo
+      install -d -m 0750 -o 1000 -g 1000  ${CRAFT_PART_INSTALL}/var/lib/forgejo
+
+      # config dir
+      # chown root:git ${CRAFT_PART_INSTALL}/etc/forgejo
+      install -d -m 0770 -o 0 -g 1000  ${CRAFT_PART_INSTALL}/etc/forgejo
+
+      # fake usrmerge
+      ln -s -r ${CRAFT_PART_INSTALL}/usr/lib ${CRAFT_PART_INSTALL}/lib
+      ln -s -r ${CRAFT_PART_INSTALL}/usr/lib64 ${CRAFT_PART_INSTALL}/lib64
+      ln -s -r ${CRAFT_PART_INSTALL}/usr/bin ${CRAFT_PART_INSTALL}/bin
+
+      # create tmpdir
+      install -d -m 0777 ${CRAFT_PART_INSTALL}/tmp
